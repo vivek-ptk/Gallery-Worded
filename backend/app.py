@@ -12,6 +12,8 @@ import torch
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
+import pickle
+import base64
 
 load_dotenv()
 
@@ -33,6 +35,10 @@ clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 # Paths
 IMAGE_FOLDER = "backend/images"
 TAG_MAPPING_FILE = "backend/tag_mapping.json"
+EMBEDDING_FILE = "backend/embeddings.pkl"
+
+# Ensure image folder exists
+os.makedirs(IMAGE_FOLDER, exist_ok=True)
 
 # Load or initialize tag mapping
 def load_tag_mapping():
@@ -45,7 +51,17 @@ def save_tag_mapping(mapping):
     with open(TAG_MAPPING_FILE, "w") as f:
         json.dump(mapping, f)
 
-# Extract image embeddings
+# Load or compute image embeddings
+def load_embeddings():
+    if os.path.exists(EMBEDDING_FILE):
+        with open(EMBEDDING_FILE, "rb") as f:
+            return pickle.load(f)
+    return {}
+
+def save_embeddings(embeddings):
+    with open(EMBEDDING_FILE, "wb") as f:
+        pickle.dump(embeddings, f)
+
 def get_image_embedding(image_path):
     image = Image.open(image_path).convert("RGB")
     inputs = clip_processor(images=image, return_tensors="pt")
@@ -57,9 +73,22 @@ def get_image_embedding(image_path):
 def cluster_images():
     image_files = [f for f in os.listdir(IMAGE_FOLDER) if f.endswith(('png', 'jpg', 'jpeg'))]
     image_paths = [os.path.join(IMAGE_FOLDER, f) for f in image_files]
-    embeddings = np.array([get_image_embedding(img) for img in image_paths])
 
-    num_clusters = min(5, len(image_files))  # Adjust number of clusters dynamically
+    all_embeddings = load_embeddings()
+    updated = False
+
+    for img in image_files:
+        if img not in all_embeddings:
+            path = os.path.join(IMAGE_FOLDER, img)
+            all_embeddings[img] = get_image_embedding(path)
+            updated = True
+
+    if updated:
+        save_embeddings(all_embeddings)
+
+    embeddings = np.array([all_embeddings[img] for img in image_files])
+
+    num_clusters = min(5, len(image_files))
     kmeans = KMeans(n_clusters=num_clusters, random_state=42, n_init=10)
     labels = kmeans.fit_predict(embeddings)
 
