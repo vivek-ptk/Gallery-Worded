@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from typing import List
 import os
 import json
@@ -27,6 +28,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files to serve images
+app.mount("/images", StaticFiles(directory="images"), name="images")
 
 # Load CLIP model
 clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
@@ -123,10 +127,9 @@ def get_tags_for_image(image_filename):
     regardless of whatever is in the image, do add tags for the texts available in the image
     return the tags in form of an array : [\"tag1\", \"tag2\", ...]
     do not add explanation, or any other text other than the json array.
-    """),
+    """)
                 ],
             ),
-            
         ]
         generate_content_config = types.GenerateContentConfig(
             response_mime_type="text/plain",
@@ -139,7 +142,7 @@ def get_tags_for_image(image_filename):
         ):
             final_output += chunk.text
         return json.loads(final_output)
-        
+
     except Exception as e:
         print("Gemini API error:", e)
         return []
