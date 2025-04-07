@@ -12,7 +12,7 @@ export default function ImageSearchPage() {
   const fileInputRef = useRef(null);
 
   const fetchImages = async () => {
-    const res = await fetch(`/search?description=${description}`);
+    const res = await fetch(`http://localhost:8000/search?description=${description}`);
     const data = await res.json();
     setImages(data.images);
     setVisibleCount(25);
@@ -26,7 +26,7 @@ export default function ImageSearchPage() {
     if (!file) return;
     const formData = new FormData();
     formData.append("file", file);
-    await fetch("/upload", { method: "POST", body: formData });
+    await fetch("http://localhost:8000/upload", { method: "POST", body: formData });
     fetchImages();
   };
 
@@ -76,7 +76,7 @@ export default function ImageSearchPage() {
         {images.slice(0, visibleCount).map((img, idx) => (
           <motion.img
             key={idx}
-            src={`/images/${img}`}
+            src={`http://localhost:8000/images/${img}`}
             alt="result"
             whileHover={{ scale: 1.05 }}
             className="w-full rounded-2xl shadow-lg object-cover aspect-square"
